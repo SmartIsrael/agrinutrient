@@ -2,8 +2,36 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import os
+import glob
+
+# Replace the problematic import
+# from stable_baselines3.common.monitor import load_monitor_data
+# with our own implementation:
+
+def load_monitor_data(path_glob):
+    """Custom implementation of load_monitor_data since it's missing in your SB3 version."""
+    monitor_files = glob.glob(path_glob)
+    if not monitor_files:
+        print(f"No monitor files found at {path_glob}")
+        return pd.DataFrame()
+    
+    data_frames = []
+    for file_path in monitor_files:
+        try:
+            data_frame = pd.read_csv(file_path, skiprows=1)
+            data_frames.append(data_frame)
+        except Exception as e:
+            print(f"Error reading {file_path}: {e}")
+    
+    if data_frames:
+        data = pd.concat(data_frames)
+        data.sort_values('t', inplace=True)
+        data.reset_index(drop=True, inplace=True)
+        return data
+    return pd.DataFrame()
+
+# Keep the other imports
 from stable_baselines3.common.results_plotter import load_results, ts2xy
-from stable_baselines3.common.monitor import load_monitor_data
 import imageio
 import time
 import cv2
@@ -324,6 +352,10 @@ def record_advanced_video(model, env_class, video_path="videos/advanced_simulati
             buf.close()
             plt.close(fig)
             
+            # Ensure the image has only 3 channels (RGB)
+            if img.shape[2] == 4:  # If it has an alpha channel
+                img = img[:, :, :3]  # Keep only RGB channels
+            
             # Resize and place in the enhanced frame
             img_resized = cv2.resize(img, (380, 780))
             enhanced_frame[10:790, 810:1190] = img_resized
@@ -387,8 +419,11 @@ def record_advanced_video(model, env_class, video_path="videos/advanced_simulati
     # Save video
     if frames:
         print(f"Saving video with {len(frames)} frames at {fps} FPS...")
-        imageio.mimsave(video_path, frames, fps=fps)
-        print(f"Video saved to {video_path}")
+        try:
+            imageio.mimsave(video_path, frames, fps=fps)
+            print(f"Video saved to {video_path}")
+        except Exception as e:
+            print(f"Error saving video: {e}")
     else:
         print("No frames captured, video not saved.")
 

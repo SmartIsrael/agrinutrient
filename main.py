@@ -6,6 +6,7 @@ from stable_baselines3 import DQN, PPO
 from environment.custom_env import HydroponicEnv
 from training.dqn_training import train_dqn_agent, demo_trained_agent as demo_dqn
 from training.pg_training import train_pg_agent, demo_trained_agent as demo_ppo, analyze_policy
+from utils.helpers import record_video, record_advanced_video
 
 def main():
     """
@@ -31,6 +32,9 @@ def main():
     
     parser.add_argument('--video_path', type=str, default='videos/simulation.mp4',
                         help='Path to save the recorded video (only for record mode)')
+    
+    parser.add_argument('--advanced', action='store_true',
+                        help='Use advanced video recording with metrics visualization')
     
     args = parser.parse_args()
     
@@ -108,16 +112,13 @@ def main():
             print("Make sure you've trained a model first or specify a valid path.")
     
     elif args.mode == 'record':
-        # Import record_video function
-        from utils.helpers import record_video
-        
         # Check if model path is specified
         if args.model_path is None:
             # Use default paths if not specified
             if args.algorithm == 'dqn':
-                args.model_path = "models/dqn/best/best_model.zip"
+                args.model_path = "models/dqn/final_model.zip"
             else:  # ppo
-                args.model_path = "models/pg/best/best_model.zip"
+                args.model_path = "models/pg/final_model.zip"
                 
         print(f"Loading model from {args.model_path} for video recording...")
         
@@ -129,7 +130,14 @@ def main():
                 model = PPO.load(args.model_path)
                 
             print("Recording simulation video...")
-            record_video(model, HydroponicEnv, args.video_path)
+            
+            # Ensure videos directory exists
+            os.makedirs(os.path.dirname(args.video_path), exist_ok=True)
+            
+            if args.advanced:
+                record_advanced_video(model, HydroponicEnv, args.video_path)
+            else:
+                record_video(model, HydroponicEnv, args.video_path)
             
         except (FileNotFoundError, ValueError) as e:
             print(f"Error loading model: {e}")
