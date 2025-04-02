@@ -4,6 +4,10 @@ import pandas as pd
 import os
 from stable_baselines3.common.results_plotter import load_results, ts2xy
 from stable_baselines3.common.monitor import load_monitor_data
+import imageio
+import time
+import cv2
+import io
 
 def plot_learning_curve(log_folder, title='Learning Curve'):
     """
@@ -143,6 +147,250 @@ def create_requirements_file(output_path="requirements.txt"):
             f.write(f"{req}\n")
     
     print(f"Requirements file created at {output_path}")
+
+def record_video(model, env_class, video_path="videos/simulation.mp4", episode_length=600, width=800, height=600, fps=30):
+    """
+    Records a video of the agent interacting with the environment.
+    
+    Args:
+        model: Trained RL model
+        env_class: Environment class to instantiate
+        video_path (str): Path to save the video
+        episode_length (int): Maximum number of steps in the episode
+        width (int): Width of the video
+        height (int): Height of the video
+        fps (int): Frames per second
+    """
+    # Create directory for videos if it doesn't exist
+    os.makedirs(os.path.dirname(video_path), exist_ok=True)
+    
+    # Create environment with rgb_array rendering
+    env = env_class(render_mode="rgb_array")
+    obs, info = env.reset()
+    
+    # Initialize video writer
+    frames = []
+    
+    # Run simulation
+    done = False
+    step_count = 0
+    total_reward = 0
+    
+    print(f"Recording video to {video_path}...")
+    
+    while not done and step_count < episode_length:
+        # Get action from model
+        action, _states = model.predict(obs, deterministic=True)
+        
+        # Step the environment
+        obs, reward, done, truncated, info = env.step(action)
+        total_reward += reward
+        
+        # Get rendered frame
+        frame = env.render()
+        
+        # Add step and reward info to the frame
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        cv2.putText(
+            frame,
+            f"Step: {step_count} | Reward: {reward:.2f} | Total: {total_reward:.2f}",
+            (10, 30),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.7,
+            (0, 0, 0),
+            2
+        )
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        
+        # Add to frames
+        frames.append(frame)
+        
+        # Increment step counter
+        step_count += 1
+        
+        if done or truncated:
+            break
+    
+    # Close environment
+    env.close()
+    
+    # Save video
+    if frames:
+        print(f"Saving video with {len(frames)} frames at {fps} FPS...")
+        imageio.mimsave(video_path, frames, fps=fps)
+        print(f"Video saved to {video_path}")
+    else:
+        print("No frames captured, video not saved.")
+
+def record_advanced_video(model, env_class, video_path="videos/advanced_simulation.mp4", episode_length=600, fps=30):
+    """
+    Records an advanced video of the agent interacting with the environment with additional visualizations.
+    """
+    # Create directory for videos if it doesn't exist
+    os.makedirs(os.path.dirname(video_path), exist_ok=True)
+    
+    # Create environment with rgb_array rendering
+    env = env_class(render_mode="rgb_array")
+    obs, info = env.reset()
+    
+    # Initialize video writer
+    frames = []
+    
+    # Action meanings for display
+    action_meanings = [
+        "Decrease nutrient", "No change (nutrients)", "Increase nutrient",
+        "Decrease pH", "No change (pH)", "Increase pH",
+        "Decrease water cycle", "No change (water cycle)", "Increase water cycle"
+    ]
+    
+    # For plotting history
+    history = {
+        'ph': [],
+        'ec': [],
+        'temp': [],
+        'reward': [],
+        'growth_stage': []
+    }
+    
+    # Run simulation
+    done = False
+    step_count = 0
+    total_reward = 0
+    
+    print(f"Recording advanced video to {video_path}...")
+    
+    while not done and step_count < episode_length:
+        # Get action from model
+        action, _states = model.predict(obs, deterministic=True)
+        
+        # Step the environment
+        obs, reward, done, truncated, info = env.step(action)
+        total_reward += reward
+        
+        # Update history
+        history['ph'].append(info['ph'])
+        history['ec'].append(info['ec'])
+        history['temp'].append(info['temperature'])
+        history['reward'].append(reward)
+        history['growth_stage'].append(info['growth_stage'])
+        
+        # Get rendered frame
+        frame = env.render()
+        
+        # Create an enhanced frame with metrics
+        enhanced_frame = np.zeros((800, 1200, 3), dtype=np.uint8)
+        enhanced_frame.fill(255)  # White background
+        
+        # Copy the original rendering
+        enhanced_frame[0:600, 0:800] = frame
+        
+        # Add metrics plots on the right side
+        if len(history['ph']) > 1:
+            # Create a figure with subplots for metrics
+            fig, axes = plt.subplots(4, 1, figsize=(4, 10))
+            
+            # Plot pH
+            axes[0].plot(history['ph'], 'b-')
+            axes[0].set_title('pH Level')
+            axes[0].axhline(y=5.5, color='g', linestyle='--')
+            axes[0].axhline(y=7.0, color='g', linestyle='--')
+            
+            # Plot EC
+            axes[1].plot(history['ec'], 'r-')
+            axes[1].set_title('EC Level')
+            axes[1].axhline(y=1.0, color='g', linestyle='--')
+            axes[1].axhline(y=3.0, color='g', linestyle='--')
+            
+            # Plot temperature
+            axes[2].plot(history['temp'], 'orange')
+            axes[2].set_title('Temperature')
+            axes[2].axhline(y=18.0, color='g', linestyle='--')
+            axes[2].axhline(y=26.0, color='g', linestyle='--')
+            
+            # Plot reward
+            axes[3].plot(history['reward'], 'g-')
+            axes[3].set_title('Reward')
+            
+            # Adjust layout
+            plt.tight_layout()
+            
+            # Save figure to a buffer
+            buf = io.BytesIO()
+            plt.savefig(buf, format='png')
+            buf.seek(0)
+            
+            # Load the image from buffer
+            img = imageio.imread(buf)
+            buf.close()
+            plt.close(fig)
+            
+            # Resize and place in the enhanced frame
+            img_resized = cv2.resize(img, (380, 780))
+            enhanced_frame[10:790, 810:1190] = img_resized
+        
+        # Add textual information
+        cv2.putText(
+            enhanced_frame,
+            f"Step: {step_count} | Day: {info['total_days']} | Growth: {['Seedling', 'Vegetative', 'Flowering', 'Fruiting'][info['growth_stage']]}",
+            (10, 630),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.7,
+            (0, 0, 0),
+            2
+        )
+        
+        # Add action information
+        cv2.putText(
+            enhanced_frame,
+            f"Action: {action_meanings[action]}",
+            (10, 670),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.7,
+            (0, 0, 0),
+            2
+        )
+        
+        # Add metrics
+        cv2.putText(
+            enhanced_frame,
+            f"pH: {info['ph']:.2f} | EC: {info['ec']:.2f} | Temp: {info['temperature']:.2f}°C",
+            (10, 710),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.7,
+            (0, 0, 0),
+            2
+        )
+        
+        # Add reward information
+        cv2.putText(
+            enhanced_frame,
+            f"Reward: {reward:.2f} | Total: {total_reward:.2f}",
+            (10, 750),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.7,
+            (0, 0, 0),
+            2
+        )
+        
+        # Add to frames
+        frames.append(enhanced_frame)
+        
+        # Increment step counter
+        step_count += 1
+        
+        if done or truncated:
+            break
+    
+    # Close environment
+    env.close()
+    
+    # Save video
+    if frames:
+        print(f"Saving video with {len(frames)} frames at {fps} FPS...")
+        imageio.mimsave(video_path, frames, fps=fps)
+        print(f"Video saved to {video_path}")
+    else:
+        print("No frames captured, video not saved.")
 
 if __name__ == "__main__":
     # Example usage
