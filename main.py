@@ -1,11 +1,26 @@
 import argparse
 import os
 import gymnasium as gym
+import numpy as np
+import json
 from stable_baselines3 import DQN, PPO
+from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.evaluation import evaluate_policy
 
 from environment.custom_env import HydroponicEnv
-from training.dqn_training import train_dqn_agent, demo_trained_agent as demo_dqn
-from training.pg_training import train_pg_agent, demo_trained_agent as demo_ppo, analyze_policy
+from training.dqn_training import (
+    train_dqn_agent, 
+    demo_trained_agent as demo_dqn,
+    run_hyperparameter_optimization as run_dqn_optimization,
+    train_with_best_params as train_dqn_with_best_params
+)
+from training.pg_training import (
+    train_pg_agent, 
+    demo_trained_agent as demo_ppo, 
+    analyze_policy,
+    run_hyperparameter_optimization as run_ppo_optimization,
+    train_with_best_params as train_ppo_with_best_params
+)
 from utils.helpers import record_video, record_advanced_video
 
 def main():
@@ -17,8 +32,8 @@ def main():
     parser = argparse.ArgumentParser(description='Hydroponic Nutrient Optimization with RL')
     
     parser.add_argument('--mode', type=str, default='train',
-                        choices=['train', 'test', 'demo', 'analyze', 'record'],
-                        help='Mode: train, test, demo, analyze, or record')
+                        choices=['train', 'test', 'demo', 'analyze', 'record', 'optimize', 'train_optimal'],
+                        help='Mode: train, test, demo, analyze, record, optimize, or train_optimal')
     
     parser.add_argument('--algorithm', type=str, default='dqn',
                         choices=['dqn', 'ppo'],
@@ -36,11 +51,23 @@ def main():
     parser.add_argument('--advanced', action='store_true',
                         help='Use advanced video recording with metrics visualization')
     
+    parser.add_argument('--n_trials', type=int, default=20,
+                        help='Number of optimization trials to run (for optimize mode)')
+    
+    parser.add_argument('--study_name', type=str, default=None,
+                        help='Name of the Optuna study (defaults to "dqn_optimization" or "ppo_optimization")')
+    
     args = parser.parse_args()
+    
+    # Set default study name based on algorithm if not provided
+    if args.study_name is None:
+        args.study_name = f"{args.algorithm}_optimization"
     
     # Ensure model directories exist
     os.makedirs("models/dqn", exist_ok=True)
     os.makedirs("models/pg", exist_ok=True)
+    os.makedirs("models/dqn_tuned", exist_ok=True)
+    os.makedirs("models/pg_tuned", exist_ok=True)
     
     # Track if we create an environment that needs to be closed
     env_created = False
@@ -54,6 +81,43 @@ def main():
             model = train_pg_agent(total_timesteps=args.timesteps)
             
         print("Training completed!")
+    
+    elif args.mode == 'optimize':
+        print(f"Running hyperparameter optimization for {args.algorithm.upper()} with {args.n_trials} trials...")
+        print("Note: Make sure you have Optuna installed ('pip install optuna')")
+        
+        try:
+            import optuna
+            if args.algorithm == 'dqn':
+                best_params = run_dqn_optimization(
+                    n_trials=args.n_trials, 
+                    study_name=args.study_name
+                )
+            else:  # ppo
+                best_params = run_ppo_optimization(
+                    n_trials=args.n_trials, 
+                    study_name=args.study_name
+                )
+                
+            print("\nOptimization complete!")
+            print("You can now use '--mode train_optimal' to train a model with these parameters.")
+        except ImportError:
+            print("Optuna is not installed. Please install it with 'pip install optuna'")
+    
+    elif args.mode == 'train_optimal':
+        print(f"Training {args.algorithm.upper()} model with optimal hyperparameters...")
+        
+        try:
+            if args.algorithm == 'dqn':
+                model = train_dqn_with_best_params(total_timesteps=args.timesteps)
+            else:  # ppo
+                model = train_ppo_with_best_params(total_timesteps=args.timesteps)
+                
+            print("Training with optimal hyperparameters completed!")
+            
+        except FileNotFoundError as e:
+            print(f"Error: {e}")
+            print(f"Run hyperparameter optimization first with '--mode optimize --algorithm {args.algorithm}'")
     
     elif args.mode in ['test', 'demo', 'analyze']:
         if args.model_path is None:
@@ -144,7 +208,7 @@ def main():
             print("Make sure you've trained a model first or specify a valid path.")
     
     else:
-        print("Invalid mode. Choose from 'train', 'test', 'demo', 'analyze', or 'record'.")
+        print("Invalid mode. Choose from 'train', 'test', 'demo', 'analyze', 'record', 'optimize', or 'train_optimal'.")
     
     # Clean up only if we created an environment
     if env_created:

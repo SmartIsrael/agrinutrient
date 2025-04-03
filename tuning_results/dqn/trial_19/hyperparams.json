@@ -1,0 +1,11 @@
+{
+    "learning_rate": 0.000597847774854786,
+    "buffer_size": 291908,
+    "batch_size": 64,
+    "gamma": 0.9815060795517101,
+    "exploration_fraction": 0.4041619249057245,
+    "exploration_final_eps": 0.0706030531906118,
+    "target_update_interval": 2272,
+    "learning_starts": 2014,
+    "gradient_steps": 2
+}

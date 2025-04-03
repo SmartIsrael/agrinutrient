@@ -3,7 +3,12 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import os
 import glob
-
+from environment.custom_env import HydroponicEnv
+from stable_baselines3.common.results_plotter import load_results, ts2xy
+import imageio
+import time
+import cv2
+import io
 # Replace the problematic import
 # from stable_baselines3.common.monitor import load_monitor_data
 # with our own implementation:
@@ -30,12 +35,6 @@ def load_monitor_data(path_glob):
         return data
     return pd.DataFrame()
 
-# Keep the other imports
-from stable_baselines3.common.results_plotter import load_results, ts2xy
-import imageio
-import time
-import cv2
-import io
 
 def plot_learning_curve(log_folder, title='Learning Curve'):
     """
@@ -426,6 +425,42 @@ def record_advanced_video(model, env_class, video_path="videos/advanced_simulati
             print(f"Error saving video: {e}")
     else:
         print("No frames captured, video not saved.")
+
+def evaluate_model(model_path, algorithm="dqn", num_episodes=10, device='auto'):
+    """Run multiple evaluation episodes and report statistics"""
+    # Load the model
+    if algorithm == "dqn":
+        model = DQN.load(model_path, device=device)
+    else:
+        model = PPO.load(model_path, device=device)
+    
+    # Create environment
+    env = HydroponicEnv()
+    
+    # Run evaluation
+    rewards = []
+    for i in range(num_episodes):
+        obs, info = env.reset()
+        done = False
+        episode_reward = 0
+        
+        while not done:
+            action, _ = model.predict(obs, deterministic=True)
+            obs, reward, done, truncated, info = env.step(action)
+            episode_reward += reward
+            if done or truncated:
+                break
+        
+        rewards.append(episode_reward)
+        print(f"Episode {i+1}/{num_episodes}: Reward = {episode_reward:.2f}")
+    
+    # Calculate statistics
+    mean_reward = np.mean(rewards)
+    std_reward = np.std(rewards)
+    print(f"Mean reward: {mean_reward:.2f} ± {std_reward:.2f}")
+    
+    env.close()
+    return mean_reward, std_reward
 
 if __name__ == "__main__":
     # Example usage
