@@ -9,7 +9,7 @@ from stable_baselines3.common.monitor import Monitor
 from environment.custom_env import HydroponicEnv
 from utils.helpers import evaluate_model
 
-def plot_cumulative_rewards(num_episodes=50):
+def plot_cumulative_rewards(num_episodes=5000):
     """
     Plot cumulative rewards over episodes for DQN and PPO models
     """
@@ -291,7 +291,7 @@ def generate_report_visualizations():
     os.makedirs('report_plots', exist_ok=True)
     
     print("Generating cumulative reward plots...")
-    plot_cumulative_rewards(num_episodes=50)
+    plot_cumulative_rewards(num_episodes=5000)
     
     print("\nGenerating training stability plots...")
     plot_training_stability()
