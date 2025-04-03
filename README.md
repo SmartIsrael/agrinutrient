@@ -1,9 +1,14 @@
-# Hydroponic Nutrient Optimization using Reinforcement Learning
+# Hydroponic Nutrient Optimization Using Reinforcement Learning
 
-This project implements a Reinforcement Learning (RL) system to optimize nutrient delivery in hydroponic farming systems. The RL agent learns to dynamically adjust pH levels, Electrical Conductivity (EC), and water cycles to maintain optimal growing conditions for plants at different growth stages.
+## 🌱 Introduction
+This project demonstrates how **Reinforcement Learning (RL)** can be applied to optimize nutrient delivery in **hydroponic farming**. Using two popular RL algorithms—**Deep Q-Network (DQN)** and **Proximal Policy Optimization (PPO)**—we train intelligent agents to maintain ideal conditions (pH, EC, temperature) across various plant growth stages.
 
-## Project Structure
+The agent learns to interact with a simulated hydroponic environment and make decisions that maximize plant health by adjusting:
+- Nutrient concentration (EC)
+- pH levels
+- Water cycle durations
 
+## 📁 Project Structure
 ```
 project_root/
 ├── environment/
@@ -14,84 +19,111 @@ project_root/
 │   ├── pg_training.py         # PPO training script using Stable-Baselines3
 ├── models/
 │   ├── dqn/                   # Saved DQN models
+│   ├── dqn_tuned/             # Saved DQN models with optimized hyperparameters
 │   ├── pg/                    # Saved policy gradient models
-├── utils/
-│   ├── helpers.py             # Helper functions for analysis and visualization
+│   ├── pg_tuned/              # Saved PPO models with optimized hyperparameters
+│   └── algorithm_comparison.png # Visual comparison of algorithm performances
+├── report_plots/              # Visualization plots for performance analysis
+│   ├── cumulative_rewards.png # Comparison of cumulative rewards
+│   ├── episode_rewards.png    # Comparison of per-episode rewards
+├── tuning_results/            # Results from hyperparameter optimization
+│   ├── dqn/                   # DQN optimization trials
+│   └── ppo/                   # PPO optimization trials
+├── videos/                    # Video recordings of trained agents
+│   ├── dqn_advanced.mp4       # DQN agent with metrics visualization
+│   └── ppo_advanced.mp4       # PPO agent with metrics visualization
 ├── main.py                    # Entry point for running RL experiments
+├── comprehensive_eval.py      # Comprehensive evaluation of trained models
+├── visualization_report.py    # Script to generate visualization plots
 ├── requirements.txt           # Dependencies
 └── README.md                  # Documentation
 ```
 
-## Features
+## ✨ Features
+- ✅ Custom **Gymnasium environment** simulating a hydroponic farming system
+- ✅ **State space**: pH level, EC, temperature, plant growth stage
+- ✅ **Action space**: Adjust nutrients, pH levels, and water cycle duration
+- ✅ Two RL algorithms implemented: **DQN** and **PPO**
+- ✅ Visualization engine using **PyGame**
+- ✅ Hyperparameter tuning using **Optuna**
+- ✅ Performance tracking and **visualization plots**
+- ✅ Video recording with **real-time metrics overlay**
 
-- Custom Gymnasium environment simulating hydroponic systems
-- State space includes pH, EC, temperature, and plant growth stage
-- Action space allows for adjusting nutrients, pH, and water cycle timing
-- Two RL algorithms implemented: DQN and PPO (Proximal Policy Optimization)
-- Visual rendering of the hydroponic system and plant growth
-- Detailed analysis tools for policy exploration
+## 📊 Visualizations
+- **Cumulative Reward Comparison:**  
+  ![Cumulative Rewards](report_plots/cumulative_rewards.png)
+- **Per-Episode Reward Comparison:**  
+  ![Episode Rewards](report_plots/episode_rewards.png)
+- **Algorithm Comparison Chart:**  
+  ![Algorithm Comparison](models/algorithm_comparison.png)
 
-## Installation
+## 🎥 Video Demonstrations
+- **DQN Agent**: [dqn_advanced.mp4](videos/dqn_advanced.mp4)  
+- **PPO Agent**: [ppo_advanced.mp4](videos/ppo_advanced.mp4)
 
+**What to observe in the videos:**
+- The environment layout: water tank, plant, sensors.
+- Real-time changes in pH, EC, and water levels.
+- Agent decisions and reward feedback as it learns.
+
+## 🛠️ Installation
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/hydroponic-rl.git
-cd hydroponic-rl
-
-# Install dependencies
+git clone https://github.com/SmartIsrael/agrinutrient.git
+cd agrinutrient
 pip install -r requirements.txt
 ```
 
-## Usage
-
-### Training a new agent
-
+## 🚀 Usage
+### Training
 ```bash
-# Train a DQN agent
-python main.py --mode train --algorithm dqn --timesteps 100000
-
-# Train a PPO agent
-python main.py --mode train --algorithm ppo --timesteps 100000
+python training/dqn_training.py         # Train DQN agent
+python training/pg_training.py          # Train PPO agent
 ```
 
-### Testing a trained agent
-
+### Hyperparameter Tuning
 ```bash
-# Test a trained DQN agent
-python main.py --mode test --algorithm dqn --model_path models/dqn/final_model.zip
-
-# Test a trained PPO agent
-python main.py --mode test --algorithm ppo --model_path models/pg/final_model.zip
+python tuning/dqn_optuna.py             # Optimize DQN
+python tuning/ppo_optuna.py             # Optimize PPO
 ```
 
-### Demonstrating a trained agent with visualization
+### Training with Tuned Hyperparameters
+Update `dqn_training.py` or `pg_training.py` with the best parameters from `/tuning_results` and re-run training.
 
+### Test Trained Agents
 ```bash
-# Demo a trained DQN agent
-python main.py --mode demo --algorithm dqn --model_path models/dqn/final_model.zip
-
-# Demo a trained PPO agent
-python main.py --mode demo --algorithm ppo --model_path models/pg/final_model.zip
+python main.py --model dqn
+python main.py --model ppo
 ```
 
-### Analyzing a trained policy (PPO only)
-
+### Record Agent Performance
 ```bash
-# Analyze a trained PPO policy
-python main.py --mode analyze --algorithm ppo --model_path models/pg/final_model.zip
+python main.py --record --model dqn
+python main.py --record --model ppo
 ```
 
-## Learning Process
+### Run Comprehensive Evaluation
+```bash
+python comprehensive_eval.py
+```
 
-The RL agent learns through trial and error by interacting with the environment:
+### Generate Visual Reports
+```bash
+python visualization_report.py
+```
 
-1. The agent observes the current state of the hydroponic system
-2. It selects an action (adjust nutrients, pH, or water cycle)
-3. The environment simulates the effect of this action
-4. The agent receives a reward based on how optimal the conditions are
-5. Over time, the agent learns to maximize rewards by maintaining ideal growing conditions
+## 🔄 Learning Process
+1. Agent observes the current hydroponic state.
+2. It selects an action (adjust nutrient/pH/water).
+3. The environment simulates the effect.
+4. The agent receives a reward based on how close the system is to optimal.
+5. Over time, it learns the best actions to maximize rewards.
 
-## License
+## 📈 Performance Analysis
+- **DQN** learns to maximize long-term rewards, achieving higher cumulative returns.
+- **PPO** excels in stability and consistent learning.
+- **DQN is more volatile**, but better at peak exploitation.
+- **PPO converges faster** and generalizes better to unseen states.
 
-MIT# agrinutrient
+## 📄 License
+This project is licensed under the **MIT License**.
 
