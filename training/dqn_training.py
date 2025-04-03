@@ -70,7 +70,7 @@ def train_dqn_agent(total_timesteps=100000, eval_freq=10000, n_eval_episodes=5, 
             gradient_steps=1,  # How many gradient steps after each update
             target_update_interval=1000,  # Update the target network every 1000 steps
             verbose=1,
-            tensorboard_log=f"{save_path}/tensorboard/"
+            tensorboard_log=f"{save_path}/tensorboard/",
         )
     else:
         model = custom_model
@@ -272,7 +272,7 @@ def train_with_best_params(total_timesteps=100000):
     )
     
     # Save the final model
-    model.save("models/dqn_tuned/final_model")
+    model.save("models/dqn/final_model")
     
     # Evaluate the final model
     mean_reward, std_reward = evaluate_policy(model, eval_env, n_eval_episodes=10)

@@ -138,7 +138,8 @@ def optimize_hyperparams_objective(trial):
         ent_coef=hyperparams['ent_coef'],
         vf_coef=hyperparams['vf_coef'],
         verbose=0,
-        tensorboard_log=tensorboard_dir
+        tensorboard_log=tensorboard_dir,
+        device = 'cpu'
     )
     
     # Setup eval callback
@@ -250,7 +251,8 @@ def train_with_best_params(total_timesteps=100000):
         ent_coef=best_params['ent_coef'],
         vf_coef=best_params['vf_coef'],
         verbose=1,
-        tensorboard_log="models/pg_tuned/tensorboard/"
+        tensorboard_log="models/pg_tuned/tensorboard/",
+        device = 'cpu'
     )
     
     # Setup eval callback
